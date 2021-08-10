@@ -1,4 +1,4 @@
-Spring_3 Web MVC
+ Spring_3 Web MVC
 -
 Required:
 
@@ -97,4 +97,4 @@ Optional (would be a great plus):
 
 3. Extend your application with the mutation tests and make sure that all of the created mutations are killed. Popular
    java implementation:
-   - https://pitest.org/
+    - https://pitest.org/
