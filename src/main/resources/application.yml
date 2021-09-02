@@ -1,0 +1,30 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+  endpoint:
+    health:
+      show-details: always
+
+logging:
+  level:
+    root: info
+
+# Configuring info endpoint
+info:
+  name: selection_committee-Spring-MVC for Epam_Java_Lab#29
+  description: adding the Spring Boot Actuator to your project and configuring the /info endpoint of it
+  version: 1.0.0-SNAPSHOT
+
+# Configuring MySql database
+spring:
+  jpa:
+    hibernate:
+      use-new-id-generator-mappings: false
+      ddl-auto: update
+    show-sql: false
+  datasource:
+    url: jdbc:mysql://localhost:3306/committee?serverTimezone=UTC
+    username: root
+    password: 140418nD
