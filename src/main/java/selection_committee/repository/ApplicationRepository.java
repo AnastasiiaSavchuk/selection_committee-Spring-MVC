@@ -1,17 +1,19 @@
 package selection_committee.repository;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import selection_committee.model.Application;
-import selection_committee.util.CRUDRepository;
+import selection_committee.model.Faculty;
+import selection_committee.model.User;
 
 import java.util.List;
 
-public interface ApplicationRepository extends CRUDRepository<Application> {
+@Repository
+public interface ApplicationRepository extends JpaRepository<Application, Integer> {
 
-    List<Application> getAllByFacultyId(int facultyId);
+    List<Application> findAllByFaculty(Faculty faculty);
 
-    List<Application> getAllByUserId(int userId);
+    List<Application> findAllByUser(User user);
 
-    void updateIsSent(int applicationId, Application application);
-
-    boolean isExist(int userId, int facultyId);
+    boolean existsByUserAndFaculty(User user, Faculty faculty);
 }

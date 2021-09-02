@@ -1,11 +1,14 @@
 package selection_committee.service;
 
 import selection_committee.dto.GradeDto;
-import selection_committee.util.CRUDRepository;
 
 import java.util.List;
 
-public interface GradeService extends CRUDRepository<GradeDto> {
+public interface GradeService {
 
-    List<GradeDto> getAllByUserId(int userId);
+    List<GradeDto> getAllGradesByUserId(int userId);
+
+    GradeDto create(int userId, int subjectId, GradeDto gradeDto);
+
+    void delete(int id);
 }

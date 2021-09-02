@@ -1,17 +1,20 @@
 package selection_committee.service;
 
 import selection_committee.dto.ApplicationDto;
-import selection_committee.util.CRUDRepository;
 
 import java.util.List;
 
-public interface ApplicationService extends CRUDRepository<ApplicationDto> {
+public interface ApplicationService {
+
+    List<ApplicationDto> getAll();
 
     List<ApplicationDto> getAllByFacultyId(int facultyId);
 
     List<ApplicationDto> getAllByUserId(int userId);
 
-    void updateIsSent(int applicationId, ApplicationDto applicationDto);
+    ApplicationDto getById(int id);
 
-    boolean isExist(int userId, int facultyId);
+    ApplicationDto create(int userId, int facultyId);
+
+    void delete(int id);
 }

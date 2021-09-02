@@ -1,12 +1,14 @@
 package selection_committee.service;
 
-
 import selection_committee.dto.FacultySubjectDto;
-import selection_committee.util.CRUDRepository;
 
 import java.util.List;
 
-public interface FacultySubjectService extends CRUDRepository<FacultySubjectDto> {
+public interface FacultySubjectService {
 
-    List<FacultySubjectDto> getAllByFacultyId(int facultyId);
+    List<FacultySubjectDto> getAllByByFacultyId(int facultyId);
+
+    FacultySubjectDto create(int facultyId, int subjectId);
+
+    void delete(int id);
 }

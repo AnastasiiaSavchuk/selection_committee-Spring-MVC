@@ -2,13 +2,22 @@ package selection_committee.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import selection_committee.dto.UserDto;
+import selection_committee.exception.PasswordsNotValidException;
+import selection_committee.exception.UserAlreadyExistsException;
+import selection_committee.exception.UserListNotFoundException;
+import selection_committee.exception.UserNotFoundException;
+import selection_committee.mapper.UserMapper;
+import selection_committee.model.Application;
 import selection_committee.model.User;
+import selection_committee.model.enums.ApplicationStatus;
+import selection_committee.repository.ApplicationRepository;
 import selection_committee.repository.UserRepository;
 import selection_committee.service.UserService;
 
-import java.util.ArrayList;
+import javax.transaction.Transactional;
 import java.util.List;
 
 @Slf4j
@@ -16,106 +25,81 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService {
 
-    private final UserRepository repository;
+    private final UserRepository UR;
+    private final ApplicationRepository AR;
+    private final UserMapper MAPPER = UserMapper.INSTANCE;
 
     @Override
     public List<UserDto> getAll() {
-        log.info("getUser list.");
-        List<User> users = new ArrayList<>(repository.getAll());
-        return mapUserListToUserDtoList(users);
+        List<User> list = UR.findAll();
+        if (list.isEmpty()) {
+            throw new UserListNotFoundException();
+        }
+        log.info("List of 'users' is found.");
+        return MAPPER.mapToListDto(list);
     }
 
     @Override
     public UserDto getByEmail(String email) {
-        log.info("getUser by email : {}.", email);
-        User user = repository.getByEmail(email);
-        return mapUserToUserDto(user);
+        User user = UR.findByEmail(email).orElseThrow(UserNotFoundException::new);
+        log.info("'User' by email : {} is found.", email);
+        return MAPPER.mapToUserDto(user);
     }
 
     @Override
-    public UserDto getById(int id) {
-        log.info("getUser by id : {}.", id);
-        User user = repository.getById(id);
-        return mapUserToUserDto(user);
-    }
-
-    @Override
+    @Transactional
     public UserDto create(UserDto userDto) {
-        log.info("createUser with email : {}.", userDto.getEmail());
-        User user = mapUserDtoToUser(userDto);
-        user = repository.create(user);
-        return mapUserToUserDto(user);
-    }
-
-    @Override
-    public UserDto update(int id, UserDto userDto) {
-        log.info("updateUser with id : {}", id);
-        User user = mapUserDtoToUser(userDto);
-        user = repository.update(id, user);
-        return mapUserToUserDto(user);
-    }
-
-    @Override
-    public UserDto updateByAdmin(int id, UserDto userDto) {
-        log.info("updateUserByAdmin with id : {}", id);
-        User user = mapUserDtoToUser(userDto);
-        user = repository.updateByAdmin(id, user);
-        return mapUserToUserDto(user);
-    }
-
-    @Override
-    public void delete(int id) {
-        log.info("deleteUser with id : {}.", id);
-        repository.delete(id);
-    }
-
-    private UserDto mapUserToUserDto(User user) {
-        return UserDto.builder()
-                .id(user.getId())
-                .email(user.getEmail())
-                .role(user.getRole())
-                .firstName(user.getFirstName())
-                .middleName(user.getMiddleName())
-                .lastName(user.getLastName())
-                .city(user.getCity())
-                .region(user.getRegion())
-                .schoolName(user.getSchoolName())
-                .isBlocked(user.isBlocked())
-                .build();
-    }
-
-    private List<UserDto> mapUserListToUserDtoList(List<User> users) {
-        List<UserDto> userDtoList = new ArrayList<>();
-        for (User user : users) {
-            userDtoList.add(UserDto.builder()
-                    .id(user.getId())
-                    .email(user.getEmail())
-                    .role(user.getRole())
-                    .firstName(user.getFirstName())
-                    .middleName(user.getMiddleName())
-                    .lastName(user.getLastName())
-                    .city(user.getCity())
-                    .region(user.getRegion())
-                    .schoolName(user.getSchoolName())
-                    .isBlocked(user.isBlocked())
-                    .build());
+        if (UR.existsByEmail(userDto.getEmail())) {
+            throw new UserAlreadyExistsException();
         }
-        return userDtoList;
+        validationPassword(userDto);
+        User user = MAPPER.mapToUser(userDto);
+        user = UR.save(user);
+        log.info("'User' with email : {} successfully created. ", user.getEmail());
+        return MAPPER.mapToUserDto(user);
     }
 
-    private User mapUserDtoToUser(UserDto userDto) {
-        return User.builder()
-                .id(userDto.getId())
-                .email(userDto.getEmail())
-                .password(userDto.getPassword())
-                .role(userDto.getRole())
-                .firstName(userDto.getFirstName())
-                .middleName(userDto.getMiddleName())
-                .lastName(userDto.getLastName())
-                .city(userDto.getCity())
-                .region(userDto.getRegion())
-                .schoolName(userDto.getSchoolName())
-                .isBlocked(userDto.isBlocked())
-                .build();
+    @Override
+    @Transactional
+    public UserDto update(int id, UserDto userDto) {
+        User user = MAPPER.mapToUser(userDto);
+
+        User updated = UR.findById(id).orElseThrow(UserNotFoundException::new);
+        user.setId(updated.getId());
+        user.setEmail(updated.getEmail());
+        user.setPassword(updated.getPassword());
+
+        user = UR.save(user);
+        log.info("'User' with id : {} successfully updated.", user.getId());
+        return MAPPER.mapToUserDto(user);
+    }
+
+    @Override
+    @Transactional
+    public UserDto changeBlockedStatus(int id) {
+        User user = UR.findById(id).orElseThrow(UserNotFoundException::new);
+        user.setBlockedStatus(!user.isBlockedStatus());
+        user = UR.save(user);
+        for (Application application : AR.findAllByUser(user)) {
+            application.setApplicationStatus(ApplicationStatus.BLOCKED);
+            AR.save(application);
+        }
+        log.info("'User' with id : {} successfully updated blocked status.", user.getId());
+        return MAPPER.mapToUserDto(user);
+    }
+
+    @Override
+    @Transactional
+    public void delete(int id) {
+        User user = UR.findById(id).orElseThrow(UserNotFoundException::new);
+        UR.delete(user);
+        log.info("'User' with id : {} successfully deleted.", user.getId());
+    }
+
+    private void validationPassword(UserDto userDto) {
+        if (!StringUtils.isNotBlank(userDto.getPassword()) &&
+                !StringUtils.equals(userDto.getPassword(), userDto.getConfirmPassword())) {
+            throw new PasswordsNotValidException();
+        }
     }
 }

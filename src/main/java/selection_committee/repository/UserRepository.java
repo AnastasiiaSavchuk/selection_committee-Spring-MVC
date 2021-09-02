@@ -1,11 +1,15 @@
 package selection_committee.repository;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import selection_committee.model.User;
-import selection_committee.util.CRUDRepository;
 
-public interface UserRepository extends CRUDRepository<User> {
+import java.util.Optional;
 
-    User getByEmail(String email);
+@Repository
+public interface UserRepository extends JpaRepository<User, Integer> {
 
-    User updateByAdmin(int id, User user);
+    Optional<User> findByEmail(String email);
+
+    boolean existsByEmail(String email);
 }

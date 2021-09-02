@@ -3,13 +3,18 @@ package selection_committee.service.impl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import selection_committee.dto.ApplicationDto;
+import selection_committee.exception.FacultyNotFoundException;
+import selection_committee.exception.StatementAlreadyCreateException;
+import selection_committee.exception.StatementAlreadyRollbackException;
+import selection_committee.mapper.ApplicationMapper;
 import selection_committee.model.Application;
-import selection_committee.model.Faculty;
 import selection_committee.model.enums.ApplicationStatus;
-import selection_committee.repository.impl.ApplicationRepositoryImpl;
+import selection_committee.repository.ApplicationRepository;
+import selection_committee.repository.FacultyRepository;
 import selection_committee.service.StatementService;
-import selection_committee.util.mail.MessageCreator;
 
+import javax.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,53 +23,79 @@ import java.util.List;
 @RequiredArgsConstructor
 public class StatementServiceImpl implements StatementService {
 
-    @Override
-    public void changeApplicationStatus(List<Application> applicationList, Faculty faculty) {
-        int places = 1;
+    private final FacultyRepository FR;
+    private final ApplicationRepository AR;
+    private final ApplicationMapper MAPPER = ApplicationMapper.INSTANCE;
 
-        for (Application application : applicationList) {
-            if (application.getUser().isBlocked()) {
+    @Override
+    @Transactional
+    public List<ApplicationDto> create(int facultyId) {
+        int places = 1;
+        List<Application> list = AR.findAllByFaculty(FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new));
+        if (existsStatement(list)) {
+            throw new StatementAlreadyCreateException();
+        }
+        for (Application application : list) {
+            if (application.getUser().isBlockedStatus()) {
                 continue;
             }
-
-            if (places <= faculty.getBudgetQty() &&
-                    application.getAverageGrade() >= faculty.getAveragePassingGrade()) {
+            if (places <= application.getFaculty().getBudgetQty()
+                    && application.getAverageGrade() >= application.getFaculty().getAveragePassingGrade()) {
                 places++;
                 application.setApplicationStatus(ApplicationStatus.BUDGET_APPROVED);
-            } else if (places <= faculty.getBudgetQty() &&
-                    application.getAverageGrade() <= faculty.getAveragePassingGrade()) {
+            } else if (places <= application.getFaculty().getBudgetQty()
+                    && application.getAverageGrade() <= application.getFaculty().getAveragePassingGrade()) {
                 places++;
                 application.setApplicationStatus(ApplicationStatus.BUDGET_APPROVED);
-            } else if (places <= faculty.getTotalQty() &&
-                    application.getAverageGrade() >= faculty.getAveragePassingGrade()) {
+            } else if (places <= application.getFaculty().getTotalQty() && application.getAverageGrade() >= application.getFaculty().getAveragePassingGrade()) {
                 places++;
                 application.setApplicationStatus(ApplicationStatus.CONTRACT_APPROVED);
-            } else if (places <= faculty.getTotalQty() &&
-                    application.getAverageGrade() <= faculty.getAveragePassingGrade()) {
+            } else if (places <= application.getFaculty().getTotalQty() && application.getAverageGrade() <= application.getFaculty().getAveragePassingGrade()) {
                 places++;
                 application.setApplicationStatus(ApplicationStatus.CONTRACT_APPROVED);
             } else {
                 application.setApplicationStatus(ApplicationStatus.REJECTED);
             }
         }
+        changeApplicationStatus(MAPPER.mapToListDto(list));
+        log.info("'Statement' by facultyId : {} successfully created.", facultyId);
+        return MAPPER.mapToListDto(list);
     }
 
     @Override
-    public void rollbackApplicationStatus(List<Application> applicationList) {
-        for (Application currentApp : applicationList) {
-            if (currentApp.getApplicationStatus() == ApplicationStatus.BLOCKED) {
+    @Transactional
+    public List<ApplicationDto> rollback(int facultyId) {
+        List<Application> list = AR.findAllByFaculty(FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new));
+        if (!existsStatement(list)) {
+            throw new StatementAlreadyRollbackException();
+        }
+        for (Application dto : list) {
+            if (dto.getApplicationStatus() == ApplicationStatus.BLOCKED) {
                 continue;
             }
-            currentApp.setApplicationStatus(ApplicationStatus.IN_PROCESSING);
+            dto.setApplicationStatus(ApplicationStatus.IN_PROCESSING);
         }
+        changeApplicationStatus(MAPPER.mapToListDto(list));
+        log.info("'Statement' by facultyId : {} successfully rollback.", facultyId);
+        return MAPPER.mapToListDto(list);
     }
 
-    @Override
-    public boolean changeApplicationStatusByQTY(List<Application> applicationList) {
+    private boolean existsStatement(List<Application> applicationsList) {
+        for (Application application : applicationsList) {
+            if (application.getApplicationStatus() == ApplicationStatus.IN_PROCESSING) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void changeApplicationStatus(List<ApplicationDto> list) {
         List<Thread> threads = new ArrayList<>();
-        for (Application application : applicationList) {
+        for (ApplicationDto dto : list) {
             Thread newThread = new Thread(() -> {
-                new ApplicationRepositoryImpl().update(application.getId(), application);
+                dto.setId(dto.getId());
+                dto.setApplicationStatus(dto.getApplicationStatus());
+                AR.save(MAPPER.mapToApplication(dto));
             });
             newThread.start();
             threads.add(newThread);
@@ -74,48 +105,8 @@ public class StatementServiceImpl implements StatementService {
                 t.join();
             } catch (InterruptedException e) {
                 log.error("Cannot close thread: " + e.getMessage());
-                return false;
+                t.interrupt();
             }
         }
-        return true;
-    }
-
-    @Override
-    public boolean isExist(List<Application> applicationsList) {
-        for (Application application : applicationsList) {
-            if (application.getApplicationStatus() == ApplicationStatus.IN_PROCESSING) {
-                return false;
-            }
-        }
-        return true;
-    }
-
-    @Override
-    public void sendToEmail(List<Application> applicationsList) {
-        for (Application application : applicationsList) {
-            if (application.getApplicationStatus() == ApplicationStatus.BUDGET_APPROVED ||
-                    application.getApplicationStatus() == ApplicationStatus.CONTRACT_APPROVED) {
-                MessageCreator.writeSuccessfulEnrollment(application.getUser().getEmail(),
-                        application.getUser().getFirstName(), application.getUser().getLastName(),
-                        application.getUser().getMiddleName(), application.getApplicationStatus(),
-                        application.getFaculty().getFacultyName());
-            } else {
-                MessageCreator.writeUnSuccessfullyEnrollment(application.getUser().getEmail(),
-                        application.getUser().getFirstName(), application.getUser().getLastName(),
-                        application.getUser().getMiddleName(), application.getFaculty().getFacultyName());
-            }
-            new ApplicationRepositoryImpl().updateIsSent(application.getId(), application);
-        }
-    }
-
-    @Override
-    public boolean isSent(List<Application> applicationsList) {
-        for (Application application : applicationsList) {
-            if (!application.isSent()) {
-                return false;
-            }
-        }
-        return true;
     }
 }
-

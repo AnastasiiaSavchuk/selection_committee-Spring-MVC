@@ -1,7 +1,9 @@
 package selection_committee.repository;
 
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
 import selection_committee.model.Faculty;
-import selection_committee.util.CRUDRepository;
 
-public interface FacultyRepository extends CRUDRepository<Faculty> {
+@Repository
+public interface FacultyRepository extends JpaRepository<Faculty, Integer> {
 }

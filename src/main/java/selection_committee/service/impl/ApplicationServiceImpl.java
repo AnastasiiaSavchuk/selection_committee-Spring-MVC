@@ -4,11 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import selection_committee.dto.ApplicationDto;
-import selection_committee.model.Application;
-import selection_committee.repository.ApplicationRepository;
+import selection_committee.exception.*;
+import selection_committee.mapper.ApplicationMapper;
+import selection_committee.model.*;
+import selection_committee.model.enums.ApplicationStatus;
+import selection_committee.repository.*;
 import selection_committee.service.ApplicationService;
 
-import java.util.ArrayList;
+import javax.transaction.Transactional;
 import java.util.List;
 
 @Slf4j
@@ -16,108 +19,92 @@ import java.util.List;
 @RequiredArgsConstructor
 public class ApplicationServiceImpl implements ApplicationService {
 
-    private final ApplicationRepository repository;
+    private final ApplicationRepository AR;
+    private final FacultyRepository FR;
+    private final FacultySubjectRepository FSR;
+    private final UserRepository UR;
+    private final GradeRepository GR;
+    private final ApplicationMapper MAPPER = ApplicationMapper.INSTANCE;
 
     @Override
     public List<ApplicationDto> getAll() {
-        log.info("getApplication list.");
-        List<Application> applications = repository.getAll();
-        return mapApplicationListToApplicationDtoList(applications);
+        List<Application> list = AR.findAll();
+        if (list.isEmpty()) {
+            throw new ApplicationListNotFoundException();
+        }
+        log.info("List of 'application' is found.");
+        return MAPPER.mapToListDto(list);
     }
 
     @Override
     public List<ApplicationDto> getAllByFacultyId(int facultyId) {
-        log.info("getApplication list by facultyId : {}.", facultyId);
-        List<Application> application = repository.getAllByFacultyId(facultyId);
-        return mapApplicationListToApplicationDtoList(application);
+        List<Application> list = AR.findAllByFaculty(FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new));
+        if (list.isEmpty()) {
+            throw new ApplicationListNotFoundException();
+        }
+        log.info("List of 'application' by facultyId {} is found.", facultyId);
+        return MAPPER.mapToListDto(list);
     }
 
     @Override
     public List<ApplicationDto> getAllByUserId(int userId) {
-        log.info("getApplication list by userId : {}.", userId);
-        List<Application> application = repository.getAllByUserId(userId);
-        return mapApplicationListToApplicationDtoList(application);
+        List<Application> list = AR.findAllByUser(UR.findById(userId).orElseThrow(UserNotFoundException::new));
+        if (list.isEmpty()) {
+            throw new ApplicationListNotFoundException();
+        }
+        log.info("List of 'application' by userId {} is found.", userId);
+        return MAPPER.mapToListDto(list);
     }
 
     @Override
     public ApplicationDto getById(int id) {
-        log.info("getApplication by id : {}.", id);
-        Application application = repository.getById(id);
-        return mapApplicationToApplicationDto(application);
+        Application application = AR.findById(id).orElseThrow(ApplicationNotFoundException::new);
+        log.info("'Application' by id : {} is found.", id);
+        return MAPPER.mapToApplicationDto(application);
     }
 
 
     @Override
-    public ApplicationDto create(ApplicationDto applicationDto) {
-        log.info("createApplication");
-        Application application = mapApplicationDtoToApplication(applicationDto);
-        application = repository.create(application);
-        return mapApplicationToApplicationDto(application);
-    }
-
-    @Override
-    public ApplicationDto update(int id, ApplicationDto applicationDto) {
-        log.info("updateApplication with id : {}", id);
-        Application application = mapApplicationDtoToApplication(applicationDto);
-        application = repository.update(id, application);
-        return mapApplicationToApplicationDto(application);
-    }
-
-    @Override
-    public void updateIsSent(int applicationId, ApplicationDto applicationDto) {
-        log.info("updateApplicationIsSent with applicationId : {}", applicationDto);
-        Application application = mapApplicationDtoToApplication(applicationDto);
-        repository.updateIsSent(applicationId, application);
-    }
-
-    @Override
-    public boolean isExist(int userId, int facultyId) {
-        log.info("isExist application by userId : {}, and facultyId : {}.", userId, facultyId);
-        return repository.isExist(userId, facultyId);
-    }
-
-    @Override
-    public void delete(int id) {
-        log.info("deleteApplication with gradeId : {}.", id);
-        repository.delete(id);
-    }
-
-    private ApplicationDto mapApplicationToApplicationDto(Application application) {
-        return ApplicationDto.builder()
-                .id(application.getId())
-                .user(application.getUser())
-                .faculty(application.getFaculty())
-                .sumOfGrades(application.getSumOfGrades())
-                .averageGrade(application.getAverageGrade())
-                .grades(application.getGrades())
-                .build();
-    }
-
-    private List<ApplicationDto> mapApplicationListToApplicationDtoList(List<Application> applications) {
-        List<ApplicationDto> applicationDtoList = new ArrayList<>();
-        for (Application application : applications) {
-            applicationDtoList.add(ApplicationDto.builder()
-                    .id(application.getId())
-                    .user(application.getUser())
-                    .faculty(application.getFaculty())
-                    .sumOfGrades(application.getSumOfGrades())
-                    .averageGrade(application.getAverageGrade())
-                    .grades(application.getGrades())
-                    .isSent(application.isSent())
-                    .build());
+    @Transactional
+    public ApplicationDto create(int userId, int facultyId) {
+        User user = UR.findById(userId).orElseThrow(UserNotFoundException::new);
+        Faculty faculty = FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new);
+        if (AR.existsByUserAndFaculty(user, faculty)) {
+            throw new ApplicationAlreadyExistsException();
         }
-        return applicationDtoList;
+        Application application = Application.builder()
+                .user(user)
+                .faculty(faculty)
+                .sumOfGrades(sumOfGrades(user, faculty))
+                .averageGrade(averageGrade(user, faculty))
+                .applicationStatus(ApplicationStatus.IN_PROCESSING)
+                .build();
+        application = AR.save(application);
+        log.info("'Application' with id : {} successfully created.", application.getId());
+        return MAPPER.mapToApplicationDto(application);
     }
 
-    private Application mapApplicationDtoToApplication(ApplicationDto applicationDto) {
-        return Application.builder()
-                .id(applicationDto.getId())
-                .user(applicationDto.getUser())
-                .faculty(applicationDto.getFaculty())
-                .sumOfGrades(applicationDto.getSumOfGrades())
-                .averageGrade(applicationDto.getAverageGrade())
-                .grades(applicationDto.getGrades())
-                .isSent(applicationDto.isSent())
-                .build();
+    @Override
+    @Transactional
+    public void delete(int id) {
+        Application application = AR.findById(id).orElseThrow(ApplicationNotFoundException::new);
+        AR.delete(application);
+        log.info("'Application' with id : {} successfully deleted.", id);
+    }
+
+    private int sumOfGrades(User user, Faculty faculty) {
+        int sum = 0;
+        for (Grade grade : GR.findAllByUser(user)) {
+            for (FacultySubject facultySubject : FSR.findAllByFaculty(faculty)) {
+                if (grade.getSubject() == facultySubject.getSubject()) {
+                    sum += grade.getGrade();
+                }
+            }
+        }
+        return sum;
+    }
+
+    private int averageGrade(User user, Faculty faculty) {
+        return sumOfGrades(user, faculty) / FSR.findAllByFaculty(faculty).size();
     }
 }

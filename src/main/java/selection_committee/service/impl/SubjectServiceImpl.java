@@ -4,11 +4,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import selection_committee.dto.SubjectDto;
+import selection_committee.exception.SubjectAlreadyExistsException;
+import selection_committee.exception.SubjectListNotFoundException;
+import selection_committee.exception.SubjectNotFoundException;
+import selection_committee.mapper.SubjectMapper;
 import selection_committee.model.Subject;
+import selection_committee.repository.FacultySubjectRepository;
 import selection_committee.repository.SubjectRepository;
 import selection_committee.service.SubjectService;
 
-import java.util.ArrayList;
+import javax.transaction.Transactional;
 import java.util.List;
 
 @Slf4j
@@ -16,69 +21,54 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SubjectServiceImpl implements SubjectService {
 
-    private final SubjectRepository repository;
+    private final SubjectRepository FR;
+    private final FacultySubjectRepository FSR;
+    private final SubjectMapper MAPPER = SubjectMapper.INSTANCE;
 
     @Override
     public List<SubjectDto> getAll() {
-        log.info("getSubject list.");
-        List<Subject> subjects = repository.getAll();
-        return mapSubjectListToSubjectDtoList(subjects);
+        List<Subject> list = FR.findAll();
+        if (list.isEmpty()) {
+            throw new SubjectListNotFoundException();
+        }
+        log.info("List of 'subjects' is found.");
+        return MAPPER.mapToListDto(list);
     }
 
     @Override
     public SubjectDto getById(int id) {
-        log.info("getSubject by id : {}.", id);
-        Subject subject = repository.getById(id);
-        return mapSubjectToSubjectDto(subject);
+        Subject subject = FR.findById(id).orElseThrow(SubjectNotFoundException::new);
+        log.info("'Subject' by id : {} is found.", subject.getId());
+        return MAPPER.mapToSubjectDto(subject);
     }
 
     @Override
+    @Transactional
     public SubjectDto create(SubjectDto subjectDto) {
-        log.info("createSubject.");
-        Subject subject = mapSubjectDtoToSubject(subjectDto);
-        subject = repository.create(subject);
-        return mapSubjectToSubjectDto(subject);
-    }
-
-    @Override
-    public SubjectDto update(int id, SubjectDto subjectDto) {
-        log.info("updateSubject with id : {}", id);
-        Subject subject = mapSubjectDtoToSubject(subjectDto);
-        subject = repository.update(id, subject);
-        return mapSubjectToSubjectDto(subject);
-    }
-
-    @Override
-    public void delete(int id) {
-        log.info("deleteSubject with id : {}.", id);
-        repository.delete(id);
-    }
-
-    private SubjectDto mapSubjectToSubjectDto(Subject subject) {
-        return SubjectDto.builder()
-                .id(subject.getId())
-                .passingGrade(subject.getPassingGrade())
-                .subjectName(subject.getSubjectName())
-                .build();
-    }
-
-    private List<SubjectDto> mapSubjectListToSubjectDtoList(List<Subject> subjects) {
-        List<SubjectDto> subjectDtoList = new ArrayList<>();
-        for (Subject subject : subjects) {
-            subjectDtoList.add(SubjectDto.builder()
-                    .id(subject.getId())
-                    .passingGrade(subject.getPassingGrade())
-                    .subjectName(subject.getSubjectName())
-                    .build());
+        if (FR.existsById(subjectDto.getId())) {
+            throw new SubjectAlreadyExistsException();
         }
-        return subjectDtoList;
+        Subject subject = MAPPER.mapToSubject(subjectDto);
+        subject = FR.save(subject);
+        log.info("'Subject' with id : {} successfully created. ", subject.getId());
+        return MAPPER.mapToSubjectDto(subject);
     }
 
-    private Subject mapSubjectDtoToSubject(SubjectDto subjectDto) {
-        return Subject.builder()
-                .id(subjectDto.getId())
-                .passingGrade(subjectDto.getPassingGrade())
-                .subjectName(subjectDto.getSubjectName())
-                .build();
+    @Override
+    @Transactional
+    public SubjectDto update(int id, SubjectDto subjectDto) {
+        Subject subject = MAPPER.mapToSubject(subjectDto);
+        subject.setId(id);
+        subject = FR.save(subject);
+        log.info("'Subject' with id : {} successfully updated.", subject.getId());
+        return MAPPER.mapToSubjectDto(subject);
+    }
+
+    @Override
+    @Transactional
+    public void delete(int id) {
+        Subject subject = FR.findById(id).orElseThrow(SubjectNotFoundException::new);
+        FR.delete(subject);
+        log.info("'Subject' with id : {} successfully deleted.", id);
     }
 }
