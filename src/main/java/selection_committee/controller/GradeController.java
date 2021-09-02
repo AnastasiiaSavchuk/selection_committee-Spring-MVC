@@ -1,54 +1,43 @@
 package selection_committee.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import selection_committee.dto.ApplicationGradeDto;
+import org.springframework.web.bind.annotation.RestController;
+import selection_committee.api.GradeApi;
+import selection_committee.controller.asssembler.GradeAssembler;
+import selection_committee.controller.model.GradeModel;
 import selection_committee.dto.GradeDto;
 import selection_committee.service.GradeService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-public class GradeController {
+public class GradeController implements GradeApi {
 
-    private final GradeService service;
+    private final GradeService SERVICE;
+    private final GradeAssembler ASSEMBLER;
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/grades")
-    public List<GradeDto> getAll() {
-        return service.getAll();
+    @Override
+    public List<GradeModel> findAllGradesByUserId(int userId) {
+        List<GradeModel> gradeModels = new ArrayList<>();
+        List<GradeDto> list = SERVICE.getAllGradesByUserId(userId);
+        for (GradeDto dto : list) {
+            gradeModels.add(ASSEMBLER.toModel(dto));
+        }
+        return gradeModels;
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/gradesByUser/{userId}")
-    public List<GradeDto> getGradeByUserId(@PathVariable int userId) {
-        return service.getAllByUserId(userId);
+    @Override
+    public GradeModel createGrade(int userId, int subjectId, GradeDto gradeDto) {
+        GradeDto dto = SERVICE.create(userId, subjectId, gradeDto);
+        return ASSEMBLER.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/gradeById/{id}")
-    public GradeDto getById(@PathVariable int id) {
-        return service.getById(id);
-    }
-
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(value = "/createGrade")
-    public GradeDto create(@RequestBody GradeDto gradeDto) {
-        return service.create(gradeDto);
-    }
-
-    @ResponseStatus(HttpStatus.OK)
-    @PutMapping(value = "/updateGrade/{id}")
-    public GradeDto update(@PathVariable int id, @RequestBody GradeDto gradeDto) {
-        return service.update(id, gradeDto);
-    }
-
-    @DeleteMapping(value = "/deleteGrade/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
-        service.delete(id);
+    @Override
+    public ResponseEntity<Void> deleteGrade(int gradeId) {
+        SERVICE.delete(gradeId);
         return ResponseEntity.noContent().build();
     }
 }

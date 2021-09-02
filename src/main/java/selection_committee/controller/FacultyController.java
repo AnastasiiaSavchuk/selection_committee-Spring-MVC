@@ -1,47 +1,55 @@
 package selection_committee.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
+import selection_committee.api.FacultyApi;
+import selection_committee.controller.asssembler.FacultyAssembler;
+import selection_committee.controller.model.FacultyModel;
 import selection_committee.dto.FacultyDto;
 import selection_committee.service.FacultyService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-public class FacultyController {
+public class FacultyController implements FacultyApi {
 
     private final FacultyService service;
+    private final FacultyAssembler assembler;
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/faculties")
-    public List<FacultyDto> getAll() {
-        return service.getAll();
+    @Override
+    public List<FacultyModel> getAll() {
+        List<FacultyModel> facultyModels = new ArrayList<>();
+        List<FacultyDto> list = service.getAll();
+        for (FacultyDto dto : list) {
+            facultyModels.add(assembler.toModel(dto));
+        }
+        return facultyModels;
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/facultyById/{id}")
-    public FacultyDto getById(@PathVariable int id) {
-        return service.getById(id);
+    @Override
+    public FacultyModel getById(int facultyId) {
+        FacultyDto dto = service.getById(facultyId);
+        return assembler.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(value = "/createFaculty")
-    public FacultyDto create(@RequestBody FacultyDto facultyDto) {
-        return service.create(facultyDto);
+    @Override
+    public FacultyModel create(FacultyDto facultyDto) {
+        FacultyDto dto = service.create(facultyDto);
+        return assembler.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @PutMapping(value = "/updateFaculty/{id}")
-    public FacultyDto update(@PathVariable int id, @RequestBody FacultyDto facultyDto) {
-        return service.update(id, facultyDto);
+    @Override
+    public FacultyModel update(int facultyId, FacultyDto facultyDto) {
+        FacultyDto dto = service.update(facultyId, facultyDto);
+        return assembler.toModel(dto);
     }
 
-    @DeleteMapping(value = "/deleteFaculty/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
-        service.delete(id);
+    @Override
+    public ResponseEntity<Void> delete(int facultyId) {
+        service.delete(facultyId);
         return ResponseEntity.noContent().build();
     }
 }

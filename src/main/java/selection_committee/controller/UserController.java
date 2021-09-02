@@ -1,59 +1,61 @@
 package selection_committee.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
+import selection_committee.api.UserApi;
+import selection_committee.controller.asssembler.UserAssembler;
+import selection_committee.controller.model.UserModel;
 import selection_committee.dto.UserDto;
 import selection_committee.service.UserService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-public class UserController {
+public class UserController implements UserApi {
 
-    private final UserService service;
+    private final UserService SERVICE;
+    private final UserAssembler ASSEMBLER;
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/users")
-    public List<UserDto> getAll() {
-        return service.getAll();
+    @Override
+    public List<UserModel> getAll() {
+        List<UserModel> userModels = new ArrayList<>();
+        List<UserDto> list = SERVICE.getAll();
+        for (UserDto dto : list) {
+            userModels.add(ASSEMBLER.toModel(dto));
+        }
+        return userModels;
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/userByEmail/{email}")
-    public UserDto getByEmail(@PathVariable String email) {
-        return service.getByEmail(email);
+    @Override
+    public UserModel getByEmail(String email) {
+        UserDto dto = SERVICE.getByEmail(email);
+        return ASSEMBLER.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/userById/{id}")
-    public UserDto getById(@PathVariable int id) {
-        return service.getById(id);
+    @Override
+    public UserModel create(UserDto userDto) {
+        UserDto dto = SERVICE.create(userDto);
+        return ASSEMBLER.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(value = "/createUser")
-    public UserDto create(@RequestBody UserDto userDto) {
-        return service.create(userDto);
+    @Override
+    public UserModel update(int userId, UserDto userDto) {
+        UserDto dto = SERVICE.update(userId, userDto);
+        return ASSEMBLER.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @PutMapping(value = "/updateUser/{id}")
-    public UserDto update(@PathVariable int id, @RequestBody UserDto userDto) {
-        return service.update(id, userDto);
+    @Override
+    public UserModel changeBlockedStatus(int userId) {
+        UserDto dto = SERVICE.changeBlockedStatus(userId);
+        return ASSEMBLER.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @PutMapping(value = "/updateByAdmin/{id}")
-    public UserDto updateByAdmin(@PathVariable int id, @RequestBody UserDto userDto) {
-        return service.update(id, userDto);
-    }
-
-    @DeleteMapping(value = "/deleteUser/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
-        service.delete(id);
+    @Override
+    public ResponseEntity<Void> delete(int userId) {
+        SERVICE.delete(userId);
         return ResponseEntity.noContent().build();
     }
 }

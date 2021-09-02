@@ -1,47 +1,55 @@
 package selection_committee.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
+import selection_committee.api.SubjectApi;
+import selection_committee.controller.asssembler.SubjectAssembler;
+import selection_committee.controller.model.SubjectModel;
 import selection_committee.dto.SubjectDto;
 import selection_committee.service.SubjectService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-public class SubjectController {
+public class SubjectController implements SubjectApi {
 
     private final SubjectService service;
+    private final SubjectAssembler assembler;
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/subjects")
-    public List<SubjectDto> getAll() {
-        return service.getAll();
+    @Override
+    public List<SubjectModel> getAll() {
+        List<SubjectModel> subjectModels = new ArrayList<>();
+        List<SubjectDto> list = service.getAll();
+        for (SubjectDto dto : list) {
+            subjectModels.add(assembler.toModel(dto));
+        }
+        return subjectModels;
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/subjectById/{id}")
-    public SubjectDto getById(@PathVariable int id) {
-        return service.getById(id);
+    @Override
+    public SubjectModel getById(int subjectId) {
+        SubjectDto dto = service.getById(subjectId);
+        return assembler.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(value = "/createSubject")
-    public SubjectDto create(@RequestBody SubjectDto subjectDto) {
-        return service.create(subjectDto);
+    @Override
+    public SubjectModel create(SubjectDto subjectDto) {
+        SubjectDto dto = service.create(subjectDto);
+        return assembler.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @PutMapping(value = "/updateSubject/{id}")
-    public SubjectDto update(@PathVariable int id, @RequestBody SubjectDto subjectDto) {
-        return service.update(id, subjectDto);
+    @Override
+    public SubjectModel update(int subjectId, SubjectDto subjectDto) {
+        SubjectDto dto = service.update(subjectId, subjectDto);
+        return assembler.toModel(dto);
     }
 
-    @DeleteMapping(value = "/deleteSubject/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
-        service.delete(id);
+    @Override
+    public ResponseEntity<Void> delete(int subjectId) {
+        service.delete(subjectId);
         return ResponseEntity.noContent().build();
     }
 }

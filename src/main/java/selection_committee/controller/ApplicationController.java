@@ -1,65 +1,63 @@
 package selection_committee.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.RestController;
+import selection_committee.api.ApplicationApi;
+import selection_committee.controller.asssembler.ApplicationAssembler;
+import selection_committee.controller.model.ApplicationModel;
 import selection_committee.dto.ApplicationDto;
 import selection_committee.service.ApplicationService;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-public class ApplicationController {
+public class ApplicationController implements ApplicationApi {
 
     private final ApplicationService service;
+    private final ApplicationAssembler assembler;
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/applications")
-    public List<ApplicationDto> getAll() {
-        return service.getAll();
+    @Override
+    public List<ApplicationModel> getAll() {
+        List<ApplicationModel> applicationModels = new ArrayList<>();
+        List<ApplicationDto> list = service.getAll();
+        for (ApplicationDto dto : list) {
+            applicationModels.add(assembler.toModel(dto));
+        }
+        return applicationModels;
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/applicationsByFaculty/{facultyId}")
-    public List<ApplicationDto> getAllByFacultyId(@PathVariable int facultyId) {
-        return service.getAllByFacultyId(facultyId);
+    @Override
+    public List<ApplicationModel> getAllByFacultyId(int facultyId) {
+        List<ApplicationModel> applicationModels = new ArrayList<>();
+        List<ApplicationDto> list = service.getAllByFacultyId(facultyId);
+        for (ApplicationDto dto : list) {
+            applicationModels.add(assembler.toModel(dto));
+        }
+        return applicationModels;
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/applicationsByUser/{userId}")
-    public List<ApplicationDto> getAllByUserId(@PathVariable int userId) {
-        return service.getAllByUserId(userId);
+    @Override
+    public List<ApplicationModel> getAllByUserId(int userId) {
+        List<ApplicationModel> applicationModels = new ArrayList<>();
+        List<ApplicationDto> list = service.getAllByUserId(userId);
+        for (ApplicationDto dto : list) {
+            applicationModels.add(assembler.toModel(dto));
+        }
+        return applicationModels;
     }
 
-    @ResponseStatus(HttpStatus.OK)
-    @GetMapping(value = "/applicationById/{id}")
-    public ApplicationDto getById(@PathVariable int id) {
-        return service.getById(id);
+    @Override
+    public ApplicationModel create(int userId, int facultyId) {
+        ApplicationDto dto = service.create(userId, facultyId);
+        return assembler.toModel(dto);
     }
 
-    @ResponseStatus(HttpStatus.CREATED)
-    @PostMapping(value = "/createApplication")
-    public ApplicationDto create(@RequestBody ApplicationDto applicationDto) {
-        return service.create(applicationDto);
-    }
-
-    @ResponseStatus(HttpStatus.OK)
-    @PutMapping(value = "/updateApplication/{id}")
-    public ApplicationDto update(@PathVariable int id, @RequestBody ApplicationDto applicationDto) {
-        return service.update(id, applicationDto);
-    }
-
-    @GetMapping(value = "/isExist/{userId}/{facultyId}")
-    public ResponseEntity<Void> isExist(@PathVariable int userId, @PathVariable int facultyId) {
-        service.isExist(userId, facultyId);
-        return ResponseEntity.ok().build();
-    }
-
-    @DeleteMapping(value = "/deleteApplication/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
-        service.delete(id);
+    @Override
+    public ResponseEntity<Void> delete(int applicationId) {
+        service.delete(applicationId);
         return ResponseEntity.noContent().build();
     }
 }
