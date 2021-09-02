@@ -8,6 +8,8 @@ public class SelectionCommitteeApplication {
 
     public static void main(String[] args) {
         SpringApplication.run(SelectionCommitteeApplication.class, args);
+
+//        http://localhost:8080/swagger-ui.html
     }
 
 }
