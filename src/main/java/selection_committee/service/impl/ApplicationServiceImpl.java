@@ -38,7 +38,9 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public List<ApplicationDto> getAllByFacultyId(int facultyId) {
-        List<Application> list = AR.findAllByFaculty(FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new));
+        Faculty faculty = FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new);
+
+        List<Application> list = AR.findAllByFaculty(faculty);
         if (list.isEmpty()) {
             throw new ApplicationListNotFoundException();
         }
@@ -48,7 +50,9 @@ public class ApplicationServiceImpl implements ApplicationService {
 
     @Override
     public List<ApplicationDto> getAllByUserId(int userId) {
-        List<Application> list = AR.findAllByUser(UR.findById(userId).orElseThrow(UserNotFoundException::new));
+        User user = UR.findById(userId).orElseThrow(UserNotFoundException::new);
+
+        List<Application> list = AR.findAllByUser(user);
         if (list.isEmpty()) {
             throw new ApplicationListNotFoundException();
         }
@@ -57,18 +61,18 @@ public class ApplicationServiceImpl implements ApplicationService {
     }
 
     @Override
-    public ApplicationDto getById(int id) {
-        Application application = AR.findById(id).orElseThrow(ApplicationNotFoundException::new);
-        log.info("'Application' by id : {} is found.", id);
+    public ApplicationDto getById(int applicationId) {
+        Application application = AR.findById(applicationId).orElseThrow(ApplicationNotFoundException::new);
+        log.info("'Application' by id : {} is found.", applicationId);
         return MAPPER.mapToApplicationDto(application);
     }
-
 
     @Override
     @Transactional
     public ApplicationDto create(int userId, int facultyId) {
         User user = UR.findById(userId).orElseThrow(UserNotFoundException::new);
         Faculty faculty = FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new);
+
         if (AR.existsByUserAndFaculty(user, faculty)) {
             throw new ApplicationAlreadyExistsException();
         }

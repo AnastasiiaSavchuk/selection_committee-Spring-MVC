@@ -26,8 +26,8 @@ public class GradeAssembler extends RepresentationModelAssemblerSupport<GradeDto
         GradeModel model = new GradeModel(entity);
 
         Link getByUser = linkTo(methodOn(GradeController.class).findAllGradesByUserId(entity.getUser().getId())).withRel(GET_BY_USER_REL);
-        Link create = linkTo(methodOn(GradeController.class).createGrade(entity.getUser().getId(), entity.getSubject().getId(), entity)).withRel(CREATE_REL);
-        Link delete = linkTo(methodOn(GradeController.class).deleteGrade(entity.getId())).withRel(DELETE_REL);
+        Link create = linkTo(methodOn(GradeController.class).create(entity.getUser().getId(), entity.getSubject().getId(), entity)).withRel(CREATE_REL);
+        Link delete = linkTo(methodOn(GradeController.class).delete(entity.getId())).withRel(DELETE_REL);
 
         model.add(getByUser, create, delete);
         return model;

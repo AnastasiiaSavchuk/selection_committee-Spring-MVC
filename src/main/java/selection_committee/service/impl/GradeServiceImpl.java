@@ -29,7 +29,8 @@ public class GradeServiceImpl implements GradeService {
 
     @Override
     public List<GradeDto> getAllGradesByUserId(int userId) {
-        List<Grade> list = GR.findAllByUser(UR.findById(userId).orElseThrow(UserNotFoundException::new));
+        User user = UR.findById(userId).orElseThrow(UserNotFoundException::new);
+        List<Grade> list = GR.findAllByUser(user);
         if (list.isEmpty()) {
             throw new GradeListNotFoundException();
         }
@@ -38,10 +39,18 @@ public class GradeServiceImpl implements GradeService {
     }
 
     @Override
+    public GradeDto getById(int gradeId) {
+        Grade grade = GR.findById(gradeId).orElseThrow(GradeNotFoundException::new);
+        log.info("'Grade' by id : {} is found.", gradeId);
+        return MAPPER.mapToGradeDto(grade);
+    }
+
+    @Override
     @Transactional
     public GradeDto create(int userId, int subjectId, GradeDto gradeDto) {
         User user = UR.findById(userId).orElseThrow(UserNotFoundException::new);
         Subject subject = SR.findById(subjectId).orElseThrow(SubjectNotFoundException::new);
+
         if (GR.existsByUserAndSubject(user, subject)) {
             throw new GradeAlreadyExistsException();
         }

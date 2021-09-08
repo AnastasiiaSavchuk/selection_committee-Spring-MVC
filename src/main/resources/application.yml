@@ -9,7 +9,8 @@ management:
 
 logging:
   level:
-    root: info
+    org.springframework.orm.jpa: DEBUG
+    org.springframework.transaction: DEBUG
 
 # Configuring info endpoint
 info:
@@ -23,8 +24,12 @@ spring:
     hibernate:
       use-new-id-generator-mappings: false
       ddl-auto: update
-    show-sql: false
+      properties:
+        dialect: org.hibernate.dialect.MySQL5Dialect
+    show-sql: true
   datasource:
     url: jdbc:mysql://localhost:3306/committee?serverTimezone=UTC
     username: root
     password: 140418nD
+  database:
+    driverClassName: com.mysql.jdbc.Driver

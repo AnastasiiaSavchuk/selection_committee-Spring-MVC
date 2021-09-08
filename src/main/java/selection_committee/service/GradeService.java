@@ -8,7 +8,9 @@ public interface GradeService {
 
     List<GradeDto> getAllGradesByUserId(int userId);
 
+    GradeDto getById(int gradeId);
+
     GradeDto create(int userId, int subjectId, GradeDto gradeDto);
 
-    void delete(int id);
+    void delete(int gradeId);
 }

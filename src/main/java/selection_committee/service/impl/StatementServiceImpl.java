@@ -9,6 +9,7 @@ import selection_committee.exception.StatementAlreadyCreateException;
 import selection_committee.exception.StatementAlreadyRollbackException;
 import selection_committee.mapper.ApplicationMapper;
 import selection_committee.model.Application;
+import selection_committee.model.Faculty;
 import selection_committee.model.enums.ApplicationStatus;
 import selection_committee.repository.ApplicationRepository;
 import selection_committee.repository.FacultyRepository;
@@ -31,12 +32,14 @@ public class StatementServiceImpl implements StatementService {
     @Transactional
     public List<ApplicationDto> create(int facultyId) {
         int places = 1;
-        List<Application> list = AR.findAllByFaculty(FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new));
+        Faculty faculty = FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new);
+
+        List<Application> list = AR.findAllByFaculty(faculty);
         if (existsStatement(list)) {
             throw new StatementAlreadyCreateException();
         }
         for (Application application : list) {
-            if (application.getUser().isBlockedStatus()) {
+            if (application.getApplicationStatus() == ApplicationStatus.BLOCKED) {
                 continue;
             }
             if (places <= application.getFaculty().getBudgetQty()
@@ -65,7 +68,9 @@ public class StatementServiceImpl implements StatementService {
     @Override
     @Transactional
     public List<ApplicationDto> rollback(int facultyId) {
-        List<Application> list = AR.findAllByFaculty(FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new));
+        Faculty faculty = FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new);
+
+        List<Application> list = AR.findAllByFaculty(faculty);
         if (!existsStatement(list)) {
             throw new StatementAlreadyRollbackException();
         }

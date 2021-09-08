@@ -12,9 +12,9 @@ public interface ApplicationService {
 
     List<ApplicationDto> getAllByUserId(int userId);
 
-    ApplicationDto getById(int id);
+    ApplicationDto getById(int applicationId);
 
     ApplicationDto create(int userId, int facultyId);
 
-    void delete(int id);
+    void delete(int applicationId);
 }

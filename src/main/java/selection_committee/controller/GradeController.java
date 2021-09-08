@@ -30,13 +30,13 @@ public class GradeController implements GradeApi {
     }
 
     @Override
-    public GradeModel createGrade(int userId, int subjectId, GradeDto gradeDto) {
+    public GradeModel create(int userId, int subjectId, GradeDto gradeDto) {
         GradeDto dto = SERVICE.create(userId, subjectId, gradeDto);
         return ASSEMBLER.toModel(dto);
     }
 
     @Override
-    public ResponseEntity<Void> deleteGrade(int gradeId) {
+    public ResponseEntity<Void> delete(int gradeId) {
         SERVICE.delete(gradeId);
         return ResponseEntity.noContent().build();
     }

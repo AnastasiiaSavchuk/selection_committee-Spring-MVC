@@ -4,9 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import selection_committee.dto.FacultySubjectDto;
-import selection_committee.exception.ApplicationAlreadyExistsException;
-import selection_committee.exception.FacultyNotFoundException;
-import selection_committee.exception.SubjectNotFoundException;
+import selection_committee.exception.*;
 import selection_committee.mapper.FacultySubjectMapper;
 import selection_committee.model.Faculty;
 import selection_committee.model.FacultySubject;
@@ -32,9 +30,20 @@ public class FacultySubjectServiceImpl implements FacultySubjectService {
     @Override
     public List<FacultySubjectDto> getAllByByFacultyId(int facultyId) {
         Faculty faculty = FR.findById(facultyId).orElseThrow(FacultyNotFoundException::new);
+
         List<FacultySubject> list = FSR.findAllByFaculty(faculty);
+        if (list.isEmpty()) {
+            throw new FacultySubjectListNotFoundException();
+        }
         log.info("List of 'subject' by facultyId is found.");
         return MAPPER.mapToListDto(list);
+    }
+
+    @Override
+    public FacultySubjectDto getById(int id) {
+        FacultySubject facultySubject = FSR.findById(id).orElseThrow(FacultySubjectNotFoundException::new);
+        log.info("'FacultySubject' by id : {} is found.", id);
+        return MAPPER.mapToFacultySubjectDto(facultySubject);
     }
 
     @Override
@@ -44,19 +53,19 @@ public class FacultySubjectServiceImpl implements FacultySubjectService {
         Subject subject = SR.findById(subjectId).orElseThrow(SubjectNotFoundException::new);
 
         if (FSR.existsByFacultyAndSubject(faculty, subject)) {
-            throw new ApplicationAlreadyExistsException();
+            throw new FacultySubjectAlreadyExistsException();
         }
         FacultySubject facultySubject = FacultySubject.builder().faculty(faculty).subject(subject).build();
         facultySubject = FSR.save(facultySubject);
         updateAveragePassingGrade(faculty);
-        log.info("'Subject' with id : {} successfully ad to the faculty.", subjectId);
+        log.info("'Subject' with id : {} successfully added to the faculty.", subjectId);
         return MAPPER.mapToFacultySubjectDto(facultySubject);
     }
 
     @Override
     @Transactional
     public void delete(int id) {
-        FacultySubject facultySubject = FSR.findById(id).orElseThrow(FacultyNotFoundException::new);
+        FacultySubject facultySubject = FSR.findById(id).orElseThrow(FacultySubjectNotFoundException::new);
         FSR.delete(facultySubject);
         log.info("'Subject' with id : {} successfully deleted from faculty. ", facultySubject.getSubject().getId());
     }

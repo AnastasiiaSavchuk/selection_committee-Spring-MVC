@@ -60,7 +60,7 @@ public class SubjectServiceImpl implements SubjectService {
         Subject subject = MAPPER.mapToSubject(subjectDto);
         subject.setId(id);
         subject = FR.save(subject);
-        log.info("'Subject' with id : {} successfully updated.", subject.getId());
+        log.info("'Subject' with id : {} successfully updated.", id);
         return MAPPER.mapToSubjectDto(subject);
     }
 

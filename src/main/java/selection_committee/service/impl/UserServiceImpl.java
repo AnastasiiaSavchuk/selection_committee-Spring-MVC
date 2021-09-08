@@ -47,6 +47,13 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public UserDto getById(int id) {
+        User user = UR.findById(id).orElseThrow(UserNotFoundException::new);
+        log.info("'User' by id : {} is found.", id);
+        return MAPPER.mapToUserDto(user);
+    }
+
+    @Override
     @Transactional
     public UserDto create(UserDto userDto) {
         if (UR.existsByEmail(userDto.getEmail())) {
@@ -97,8 +104,7 @@ public class UserServiceImpl implements UserService {
     }
 
     private void validationPassword(UserDto userDto) {
-        if (!StringUtils.isNotBlank(userDto.getPassword()) &&
-                !StringUtils.equals(userDto.getPassword(), userDto.getConfirmPassword())) {
+        if (!StringUtils.isNotBlank(userDto.getPassword()) && !StringUtils.equals(userDto.getPassword(), userDto.getConfirmPassword())) {
             throw new PasswordsNotValidException();
         }
     }

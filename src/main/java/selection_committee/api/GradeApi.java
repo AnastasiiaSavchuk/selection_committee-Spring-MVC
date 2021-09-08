@@ -24,9 +24,9 @@ public interface GradeApi {
     @ApiOperation("Create grade")
     @ResponseStatus(HttpStatus.CREATED)
     @PostMapping("/{userId}/{subjectId}")
-    GradeModel createGrade(@PathVariable int userId, @PathVariable int subjectId, @RequestBody @Validated(OnCreate.class) GradeDto gradeDto);
+    GradeModel create(@PathVariable int userId, @PathVariable int subjectId, @RequestBody @Validated(OnCreate.class) GradeDto gradeDto);
 
     @ApiOperation("Delete grade")
     @DeleteMapping("/{gradeId}")
-    ResponseEntity<Void> deleteGrade(@PathVariable int gradeId);
+    ResponseEntity<Void> delete(@PathVariable int gradeId);
 }

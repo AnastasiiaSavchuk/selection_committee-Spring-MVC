@@ -8,6 +8,8 @@ public interface FacultySubjectService {
 
     List<FacultySubjectDto> getAllByByFacultyId(int facultyId);
 
+    FacultySubjectDto getById(int id);
+
     FacultySubjectDto create(int facultyId, int subjectId);
 
     void delete(int id);
