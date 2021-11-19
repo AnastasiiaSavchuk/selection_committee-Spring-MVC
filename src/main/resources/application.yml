@@ -28,8 +28,11 @@ spring:
         dialect: org.hibernate.dialect.MySQL5Dialect
     show-sql: true
   datasource:
-    url: jdbc:mysql://localhost:3306/committee?serverTimezone=UTC
+    url: jdbc:mysql://localhost:3306/committee?createDatabaseIfNotExist=true
     username: root
-    password: 140418nD
+    password: 140418nesD
   database:
     driverClassName: com.mysql.jdbc.Driver
+
+server:
+  port : 8090
